@@ -3,14 +3,20 @@
 
 using namespace std;
 
+string err_str; // error string for getline() on invalid input
+
 char menu(Data& userData);
 bool checkArgs(char* dataFile);
 void getName(string& NEW_NAME);
+bool getValidDeposit(string& input);
+bool getValidWithdraw(string& input);
+AccountType getAccountType();
+bool checkDecimal(string input);
 void printHelp();
 
 int main(int argc, char** argv) {
     // no flags for this program
-    string USER_NAME;
+    string USER_NAME = "";
     if(argc!=2) {
         cout<<"FundsCalculator: Invalid syntax. Use FundsCalculator --help for more information."<<endl;
         return 1;
@@ -37,8 +43,48 @@ int main(int argc, char** argv) {
     char option;
     do {
         option = menu(*userData);
+        switch(option) {
+            case 'a':
+            {
+                // DEPOSIT FUNDS
+                string deposit_amount = "";
+                AccountType a_type = getAccountType();
 
-    } while(option!='e');
+                if(a_type!=A_BREAK) {
+                    while(!getValidDeposit(deposit_amount));
+                    userData->createNewTransaction(ADD, a_type, stof(deposit_amount));
+                }
+                break;
+            }
+            case 'b':
+            {
+                break;
+            }
+            case 'c':
+            {
+                break;
+            }
+            case 'd':
+            {
+                break;
+            }
+            case 'e':
+            {
+                break;
+            }
+            case 'f':
+            {
+                break;
+            }
+            default:
+            {
+                cout<<"Please enter a valid option."<<endl;
+                cout<<"Press enter to continue.";
+                getline(cin, err_str);
+                break;
+            }
+        }
+    } while(option!='f');
 
     
     return 0;
@@ -46,15 +92,16 @@ int main(int argc, char** argv) {
 
 char menu(Data& userData) {
     cout<<"---CURRENT ACCOUNT INFO---"<<endl;
-    userData.Write();
+    userData.WriteUserInfo();
     cout<<"--------------------------"<<endl<<endl;
 
     cout<<"|======= OPTIONS ========|"<<endl;
     cout<<"| a. Deposit Funds       |"<<endl;
     cout<<"| b. Withdraw Funds      |"<<endl;
-    cout<<"| c. Remove Transaction  |"<<endl; 
-    cout<<"| d. Update Transaction  |"<<endl;
-    cout<<"| e. EXIT                |"<<endl;
+    cout<<"| c. List Transactions   |"<<endl;
+    cout<<"| d. Update Transaction  |"<<endl; 
+    cout<<"| e. Remove Transaction  |"<<endl;
+    cout<<"| f. EXIT                |"<<endl;
     cout<<"|========================|"<<endl<<endl;
     cout<<"| Please select an option: ";
     
@@ -94,6 +141,80 @@ void getName(string& NEW_NAME) {
                 ex = true; // break out of loop
         }
     } while(!ex);
+}
+
+bool getValidDeposit(string& input) {
+    // special conditions required:
+    //   1. input cannot be negative
+    //   2. input must have at maximum 2 decimals 
+
+    cout<<"Enter how much you'd like to deposit: ";
+    getline(cin, input);
+
+    // confirm is valid float
+    try {
+        float testIfValid = stof(input);
+
+        // value is a valid float. cannot be negative. confirm decimals
+        if(testIfValid<0) {
+            cout<<"You cannot deposit a negative number."<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            input = "-1";
+            return false;
+        }
+        else if(testIfValid==0) {
+            cout<<"You cannot deposit $0."<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            input = "-1";
+            return false;
+        }
+        return checkDecimal(input);
+    }
+    catch(invalid_argument e) {
+        cerr<<"That is not a valid number."<<endl;
+        cout<<"Press enter to continue.";
+        getline(cin, err_str);
+        input = "-1";
+        return false;
+    }
+}
+
+AccountType getAccountType() {
+    string input = "";
+    while(input!="1" && input!="2") {
+        cout<<"--Deposit into: "<<endl;
+        cout<<"--  1. Checking Account"<<endl;
+        cout<<"--  2. Savings Account"<<endl;
+        cout<<"--  3. EXIT TRANSACTION"<<endl;
+        cout<<"-- Enter an option: ";
+        getline(cin, input);
+
+        switch(input[0]) {
+            case '1': return CHECKING;
+            case '2': return SAVINGS;
+            case '3': break;
+            default:
+                cout<<"Please input a valid response."<<endl;
+                cout<<"Press enter to continue.";
+                getline(cin, err_str);
+                input = "";
+                break;
+        }
+    }
+    return A_BREAK;
+}
+
+bool checkDecimal(string input) {
+    // confirm that maximum number of decimals is 2
+
+    size_t found = input.find('.');
+    
+    if(found!=string::npos && (input.length()-found>3)) {
+        return false; // input.length()-found > 3 implies more than 2 decimals
+    }
+    return true;
 }
 
 void printHelp() {
