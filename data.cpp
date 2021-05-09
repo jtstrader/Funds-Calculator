@@ -3,41 +3,60 @@
 ////////////////////////////////////////
 // PUBLIC FUNCTIONS                   //
 ////////////////////////////////////////
-Data::Data() {
+Data::Data(char* fileName, string USER_NAME) {
+    dataFileName = fileName; open(dataFileName);
+    if(USER_NAME!="") {
+        // new user created
+        // create and then write new header information
+        strcpy(uInfo.USER_NAME, USER_NAME.c_str());
+        uInfo.CHECKING_BALANCE = 0;
+        uInfo.NUM_CHECKING_TRANS = 0;
+        uInfo.SAVINGS_BALANCE = 0;
+        uInfo.NUM_SAVINGS_TRANS = 0;
+        uInfo.TOTAL_BALANCE = 0;
 
+        dataFile.write((char*)&uInfo, sizeof(UserInfo));
+    }
+    else {
+        dataFile.read((char*)&uInfo, sizeof(UserInfo)); // read in header information
+        
+        // storage type: CHECKING, then SAVINGS
+        for(int i=0; i<uInfo.NUM_CHECKING_TRANS; i++) {
+            Transaction t; dataFile.read((char*)&t, sizeof(Transaction));
+            checkingRecords[t.id] = t; // save to map of records
+        }
+        for(int i=0; i<uInfo.NUM_SAVINGS_TRANS; i++) {
+            Transaction t; dataFile.read((char*)&t, sizeof(Transaction));
+            savingsRecords[t.id] = t; // save to map of records
+        }
+    }
 }
 
 Data::~Data() {
 
 }
 
-void Data::open(char* fileName, string USER_NAME, bool newFile) {
+void Data::open(char* fileName) {
     dataFile.open(fileName, ios::in | ios::out | ios::binary);
-    if(newFile) {
-        // create and then write new header information
-        strcpy(uInfo.USER_NAME, USER_NAME.c_str());
-        uInfo.CHECKINGS_BALANCE = 0;
-        uInfo.NUM_CHECKINGS_TRANS = 0;
-        uInfo.SAVINGS_BALANCE = 0;
-        uInfo.NUM_SAVINGS_TRANS = 0;
-        uInfo.TOTAL_BALANCE = 0;
-
-        dataFile.write((char*)&uInfo, sizeof(UserInfo)); // write out header information
-    }
-    else
-        dataFile.read((char*)&uInfo, sizeof(UserInfo)); // read in header information
 }
 
 void Data::close() {
-
+    dataFile.close(); // required to properly save data
 }
 
 // create new transaction and provide updates to the uInfo object
 // add transaction to the binary file.
 void Data::createNewTransaction(TransactionType t_type, AccountType a_type, float change) {
     // get last transaction record
-    map<long, Transaction>::iterator it = transactionRecords.end();
-    it--; long backId = it->second.id;
+    long backId = 0;
+    if(a_type == CHECKING && checkingRecords.size()>0) {
+        map<long, Transaction>::iterator it = checkingRecords.end();
+        it--; backId = it->first;
+    }
+    if(a_type == SAVINGS && savingsRecords.size()>0) {
+        map<long, Transaction>::iterator it = savingsRecords.end();
+        it--; backId = it->first;
+    }
     Transaction newTransaction = {
         backId+1,
         t_type,
@@ -47,9 +66,9 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
     if(t_type == SUBTRACT) 
         change *= -1;
     switch(a_type) {
-        case CHECKINGS:
-            uInfo.CHECKINGS_BALANCE+=change;
-            uInfo.NUM_CHECKINGS_TRANS++;
+        case CHECKING:
+            uInfo.CHECKING_BALANCE+=change;
+            uInfo.NUM_CHECKING_TRANS++;
             break;
 
         case SAVINGS:
