@@ -18,19 +18,23 @@ struct UserInfo {
     String USER_NAME;
     float CHECKING_BALANCE, SAVINGS_BALANCE, TOTAL_BALANCE;
     int NUM_CHECKING_TRANS, NUM_SAVINGS_TRANS;
+
+    friend ostream& operator << (ostream& stream, UserInfo& uinf);
 };
 
 /* Transaction data is maintained through a list of transaction records. These
  * will be able to be printed to the user through a public method of the data class.
  * Transactions are stored in the binary file and are gathered through a for loop,
  * with the index being handled by NUM_CHECKING_TRANS and NUM_SAVINGS_TRANS. */
-enum TransactionType{ADD, SUBTRACT};
-enum AccountType{CHECKING, SAVINGS};
+enum TransactionType{ADD, SUBTRACT, T_BREAK};
+enum AccountType{CHECKING, SAVINGS, A_BREAK};
 struct Transaction {
     long id; // track ID of transaction for changes to the list
     TransactionType t_type;
     AccountType a_type;
     float change; // change in funds (addition/subtraction)
+
+    friend ostream& operator << (ostream& stream, Transaction& tinf);
 };
 
 class Data {
@@ -46,8 +50,9 @@ class Data {
         void createNewTransaction(TransactionType t_type, AccountType a_type, float change);
 
         // printer/user interaction methods
-        void Write();
-        friend ostream& operator << (ostream& stream, Data& uinf);
+        void WriteUserInfo();
+        void WriteTransactionInfo();
+
     private:
         // variables
         UserInfo uInfo;
