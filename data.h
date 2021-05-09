@@ -1,7 +1,14 @@
 #include<map>
 #include<string>
 #include<fstream>
+#include<iostream>
+
 using namespace std;
+
+// initial definitions
+struct UserInfo;
+struct Transaction;
+class Data;
 
 /* Data is written out to a binary file. UserInfo is the header of the file
  * and keeps track of relevant information of the user, such as current balance,
@@ -30,7 +37,6 @@ class Data {
     public:
         // initializing
         Data(char* fileName, string USER_NAME);
-        ~Data();
 
         // file handling
         void open(char* fileName);
@@ -39,11 +45,9 @@ class Data {
         // transaction addition, subtraction, etc.
         void createNewTransaction(TransactionType t_type, AccountType a_type, float change);
 
-
         // printer/user interaction methods
-        void printUserInfo();
-        void printTransactions();
-
+        void Write();
+        friend ostream& operator << (ostream& stream, Data& uinf);
     private:
         // variables
         UserInfo uInfo;
@@ -54,4 +58,5 @@ class Data {
         
         // functions
         bool checkDecimal(string input); // check if number of decimals in input is valid
+        
 };
