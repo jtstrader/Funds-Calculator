@@ -14,8 +14,6 @@ Data::Data(char* fileName, string USER_NAME) {
         uInfo.SAVINGS_BALANCE = 0;
         uInfo.NUM_SAVINGS_TRANS = 0;
         uInfo.TOTAL_BALANCE = 0;
-
-        dataFile.write((char*)&uInfo, sizeof(UserInfo));
     }
     else {
         dataFile.read((char*)&uInfo, sizeof(UserInfo)); // read in header information
@@ -30,10 +28,6 @@ Data::Data(char* fileName, string USER_NAME) {
             savingsRecords[t.id] = t; // save to map of records
         }
     }
-}
-
-Data::~Data() {
-
 }
 
 void Data::open(char* fileName) {
@@ -86,6 +80,26 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
 
     
 }
+
+/*ostream& operator << (ostream& stream, UserInfo& uinf) {
+    return (
+        stream<<"|=== "<<uinf.USER_NAME<<endl
+              <<"| Checking: $"<<fixed<<setprecision(2)<<uinf.CHECKING_BALANCE<<endl
+              <<"|  Savings: $"<<fixed<<setprecision(2)<<uinf.SAVINGS_BALANCE<<endl
+              <<"|    Total: $"<<fixed<<setprecision(2)<<uinf.TOTAL_BALANCE<<endl
+              <<"|=== "<<endl
+              
+    );
+}*/
+
+void Data::Write() {
+    cout<<"|=== "<<uInfo.USER_NAME<<endl
+        <<"| Checking: $"<<fixed<<setprecision(2)<<uInfo.CHECKING_BALANCE<<endl
+        <<"|  Savings: $"<<fixed<<setprecision(2)<<uInfo.SAVINGS_BALANCE<<endl
+        <<"|    Total: $"<<fixed<<setprecision(2)<<uInfo.TOTAL_BALANCE<<endl
+        <<"|=== "<<endl;
+}
+
 ////////////////////////////////////////
 
 
