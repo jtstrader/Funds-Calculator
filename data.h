@@ -9,8 +9,8 @@ using namespace std;
 typedef char String[80];
 struct UserInfo {
     String USER_NAME;
-    float CHECKINGS_BALANCE, SAVINGS_BALANCE, TOTAL_BALANCE;
-    int NUM_CHECKINGS_TRANS, NUM_SAVINGS_TRANS;
+    float CHECKING_BALANCE, SAVINGS_BALANCE, TOTAL_BALANCE;
+    int NUM_CHECKING_TRANS, NUM_SAVINGS_TRANS;
 };
 
 /* Transaction data is maintained through a list of transaction records. These
@@ -18,7 +18,7 @@ struct UserInfo {
  * Transactions are stored in the binary file and are gathered through a for loop,
  * with the index being handled by NUM_CHECKING_TRANS and NUM_SAVINGS_TRANS. */
 enum TransactionType{ADD, SUBTRACT};
-enum AccountType{CHECKINGS, SAVINGS};
+enum AccountType{CHECKING, SAVINGS};
 struct Transaction {
     long id; // track ID of transaction for changes to the list
     TransactionType t_type;
@@ -29,11 +29,11 @@ struct Transaction {
 class Data {
     public:
         // initializing
-        Data();
+        Data(char* fileName, string USER_NAME);
         ~Data();
 
         // file handling
-        void open(char* fileName, string USER_NAME, bool newFile);
+        void open(char* fileName);
         void close();
 
         // transaction addition, subtraction, etc.
@@ -47,8 +47,10 @@ class Data {
     private:
         // variables
         UserInfo uInfo;
-        map<long, Transaction> transactionRecords;
+        map<long, Transaction> checkingRecords;
+        map<long, Transaction> savingsRecords;
         fstream dataFile;
+        char* dataFileName;
         
         // functions
         bool checkDecimal(string input); // check if number of decimals in input is valid
