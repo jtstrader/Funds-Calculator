@@ -41,19 +41,26 @@ Data::Data(char* fileName, string USER_NAME) {
         uInfo.SAVINGS_BALANCE = 0;
         uInfo.NUM_SAVINGS_TRANS = 0;
         uInfo.TOTAL_BALANCE = 0;
+
+        dataFile.write((char*)&uInfo, sizeof(UserInfo));
     }
     else {
         dataFile.read((char*)&uInfo, sizeof(UserInfo)); // read in header information
         
         // storage type: CHECKING, then SAVINGS
-        for(int i=0; i<uInfo.NUM_CHECKING_TRANS; i++) {
-            Transaction t; dataFile.read((char*)&t, sizeof(Transaction));
-            checkingRecords[t.id] = t; // save to map of records
+        Transaction t;
+        while(dataFile.read((char*)&t, sizeof(Transaction))) {
+            if(t.t_type == T_BREAK || t.a_type == A_BREAK) {
+                // this is a deleted record.
+                // record byte offset in private vector
+                avail.push_back(dataFile.tellg());
+            }
+            else if(t.a_type == CHECKING)
+                checkingRecords[t.id] = dataFile.tellg();
+            else
+                savingsRecords[t.id] = dataFile.tellg();
         }
-        for(int i=0; i<uInfo.NUM_SAVINGS_TRANS; i++) {
-            Transaction t; dataFile.read((char*)&t, sizeof(Transaction));
-            savingsRecords[t.id] = t; // save to map of records
-        }
+        dataFile.clear(); // clear error flags
     }
 }
 
@@ -71,11 +78,11 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
     // get last transaction record
     long backId = -1;
     if(a_type == CHECKING && checkingRecords.size()>0) {
-        map<long, Transaction>::iterator it = checkingRecords.end();
+        map<long, long>::iterator it = checkingRecords.end();
         it--; backId = it->first;
     }
     if(a_type == SAVINGS && savingsRecords.size()>0) {
-        map<long, Transaction>::iterator it = savingsRecords.end();
+        map<long, long>::iterator it = savingsRecords.end();
         it--; backId = it->first;
     }
     Transaction newTransaction = {
@@ -96,7 +103,23 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
             uInfo.SAVINGS_BALANCE+=change;
             uInfo.NUM_SAVINGS_TRANS++;
             break;
+        // remove compiler warning
+        case A_BREAK:
+            break;
     }
+
+    // write to file. first check avail list, if not seek to end
+    if(avail.size()>0) {
+        dataFile.seekp(avail[0]);
+        avail.erase(avail.begin()); // remove available slot
+    }
+    else
+        dataFile.seekp(0, ios::end);
+    
+    cout<<"BRUH: MY POS IS: "<<dataFile.tellg();
+    dataFile.write((char*)&newTransaction, sizeof(Transaction));
+    dataFile.seekp(0);
+    dataFile.write((char*)&uInfo, sizeof(UserInfo));
 }
 
 void Data::WriteUserInfo() {
