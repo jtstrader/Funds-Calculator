@@ -9,7 +9,7 @@ char menu(Data& userData);
 bool checkArgs(char* dataFile);
 void getName(string& NEW_NAME);
 bool getValidDeposit(string& input);
-bool getValidWithdraw(string& input);
+bool getValidWithdraw(string& input, Data& userData, AccountType a_type);
 AccountType getAccountType();
 bool checkDecimal(string input);
 void printHelp();
@@ -58,6 +58,15 @@ int main(int argc, char** argv) {
             }
             case 'b':
             {
+                // DEPOSIT FUNDS
+                string withdraw_amount = "";
+                AccountType a_type = getAccountType();
+
+                if(a_type!=A_BREAK) {
+                    while(!getValidWithdraw(withdraw_amount, *userData, a_type));
+                    userData->createNewTransaction(ADD, a_type, stof(withdraw_amount));
+                }
+                break;
                 break;
             }
             case 'c':
@@ -159,6 +168,48 @@ bool getValidDeposit(string& input) {
         // value is a valid float. cannot be negative. confirm decimals
         if(testIfValid<0) {
             cout<<"You cannot deposit a negative number."<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            input = "-1";
+            return false;
+        }
+        else if(testIfValid==0) {
+            cout<<"You cannot deposit $0."<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            input = "-1";
+            return false;
+        }
+        return checkDecimal(input);
+    }
+    catch(invalid_argument e) {
+        cerr<<"That is not a valid number."<<endl;
+        cout<<"Press enter to continue.";
+        getline(cin, err_str);
+        input = "-1";
+        return false;
+    }
+}
+
+bool getValidWithdraw(string& input, Data& userData, AccountType a_type) {
+ // special conditions required:
+    //   1. input cannot be negative
+    //   2. input must have at maximum 2 decimals 
+
+    float balance = (a_type==CHECKING
+                    ?userData.getCheckingBalance()
+                    :userData.getSavingsBalance());
+    cout<<"Current Balance: $"<<balance<<endl;
+    cout<<"Enter how much you'd like to withdraw: ";
+    getline(cin, input);
+
+    // confirm is valid float
+    try {
+        float testIfValid = stof(input);
+
+        // value is a valid float. cannot be negative. confirm decimals
+        if(testIfValid<0) {
+            cout<<"You cannot withdraw a negative amount."<<endl;
             cout<<"Press enter to continue.";
             getline(cin, err_str);
             input = "-1";
