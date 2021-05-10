@@ -125,6 +125,14 @@ void Data::WriteUserInfo() {
     cout<<uInfo;
 }
 
+float Data::getCheckingBalance() {
+    return uInfo.CHECKING_BALANCE;
+}
+
+float Data::getSavingsBalance() {
+    return uInfo.SAVINGS_BALANCE;
+}
+
 ////////////////////////////////////////
 
 
