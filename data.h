@@ -3,6 +3,8 @@
 #include<string>
 #include<fstream>
 #include<iostream>
+#include<cstring>
+#include<cstdlib>
 
 using namespace std;
 
@@ -50,9 +52,11 @@ class Data {
         // transaction addition, subtraction, etc.
         void createNewTransaction(TransactionType t_type, AccountType a_type, float change);
 
-        // printer/user interaction methods
+        // printers and getters
         void WriteUserInfo();
         void WriteTransactionInfo();
+        float getCheckingBalance();
+        float getSavingsBalance();
 
     private:
         // variables
