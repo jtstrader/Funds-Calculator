@@ -116,7 +116,6 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
     else
         dataFile.seekp(0, ios::end);
     
-    cout<<"BRUH: MY POS IS: "<<dataFile.tellg();
     dataFile.write((char*)&newTransaction, sizeof(Transaction));
     dataFile.seekp(0);
     dataFile.write((char*)&uInfo, sizeof(UserInfo));
