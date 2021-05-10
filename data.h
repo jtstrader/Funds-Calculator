@@ -1,4 +1,5 @@
 #include<map>
+#include<vector>
 #include<string>
 #include<fstream>
 #include<iostream>
@@ -56,8 +57,9 @@ class Data {
     private:
         // variables
         UserInfo uInfo;
-        map<long, Transaction> checkingRecords;
-        map<long, Transaction> savingsRecords;
+        map<long, long> checkingRecords; // maps id to byte offset
+        map<long, long> savingsRecords; // maps id to byte offset
+        vector<long> avail; // places that new records can be placed
         fstream dataFile;
         char* dataFileName;
         
