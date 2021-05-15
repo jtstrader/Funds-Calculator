@@ -10,7 +10,7 @@ bool checkArgs(char* dataFile);
 void getName(string& NEW_NAME);
 bool getValidDeposit(string& input);
 bool getValidWithdraw(string& input, Data& userData, AccountType a_type);
-AccountType getAccountType();
+AccountType getAccountType(TransactionType t_type);
 bool checkDecimal(string input);
 void printHelp();
 
@@ -48,10 +48,12 @@ int main(int argc, char** argv) {
             {
                 // DEPOSIT FUNDS
                 string deposit_amount = "";
-                AccountType a_type = getAccountType();
+                AccountType a_type = getAccountType(ADD);
 
                 if(a_type!=A_BREAK) {
                     while(!getValidDeposit(deposit_amount));
+                    if(deposit_amount == "-1")
+                        break;
                     userData->createNewTransaction(ADD, a_type, stof(deposit_amount));
                 }
                 break;
@@ -60,17 +62,19 @@ int main(int argc, char** argv) {
             {
                 // DEPOSIT FUNDS
                 string withdraw_amount = "";
-                AccountType a_type = getAccountType();
+                AccountType a_type = getAccountType(SUBTRACT);
 
                 if(a_type!=A_BREAK) {
                     while(!getValidWithdraw(withdraw_amount, *userData, a_type));
-                    userData->createNewTransaction(ADD, a_type, stof(withdraw_amount));
+                    if(withdraw_amount == "-1")
+                        break;
+                    userData->createNewTransaction(SUBTRACT, a_type, stof(withdraw_amount));
                 }
-                break;
                 break;
             }
             case 'c':
             {
+                userData->createTransactionListFiles();
                 break;
             }
             case 'd':
@@ -158,8 +162,11 @@ bool getValidDeposit(string& input) {
     //   1. input cannot be negative
     //   2. input must have at maximum 2 decimals 
 
-    cout<<"Enter how much you'd like to deposit: ";
+    cout<<"Enter how much you'd like to deposit. Enter -1 to EXIT: ";
     getline(cin, input);
+
+    if(input=="-1")
+        return true;
 
     // confirm is valid float
     try {
@@ -167,7 +174,7 @@ bool getValidDeposit(string& input) {
 
         // value is a valid float. cannot be negative. confirm decimals
         if(testIfValid<0) {
-            cout<<"You cannot deposit a negative number."<<endl;
+            cout<<"You cannot deposit a negative amount."<<endl;
             cout<<"Press enter to continue.";
             getline(cin, err_str);
             input = "-1";
@@ -183,7 +190,7 @@ bool getValidDeposit(string& input) {
         return checkDecimal(input);
     }
     catch(invalid_argument e) {
-        cerr<<"That is not a valid number."<<endl;
+        cerr<<"That is not a valid amount."<<endl;
         cout<<"Press enter to continue.";
         getline(cin, err_str);
         input = "-1";
@@ -200,8 +207,11 @@ bool getValidWithdraw(string& input, Data& userData, AccountType a_type) {
                     ?userData.getCheckingBalance()
                     :userData.getSavingsBalance());
     cout<<"Current Balance: $"<<balance<<endl;
-    cout<<"Enter how much you'd like to withdraw: ";
+    cout<<"Enter how much you'd like to withdraw. Enter -1 to EXIT: ";
     getline(cin, input);
+
+    if(input=="-1")
+        return true;
 
     // confirm is valid float
     try {
@@ -216,16 +226,27 @@ bool getValidWithdraw(string& input, Data& userData, AccountType a_type) {
             return false;
         }
         else if(testIfValid==0) {
-            cout<<"You cannot deposit $0."<<endl;
+            cout<<"You cannot withdraw $0."<<endl;
             cout<<"Press enter to continue.";
             getline(cin, err_str);
             input = "-1";
             return false;
         }
-        return checkDecimal(input);
+        if(!checkDecimal(input))
+            return false;
+        
+        // confirm this will not exceed the withdrawal amount
+        if((balance-testIfValid)<0) {
+            cout<<"You cannot withdraw an amount higher than your balance!"<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            input = "-1";
+            return false;
+        }
+        return true;
     }
     catch(invalid_argument e) {
-        cerr<<"That is not a valid number."<<endl;
+        cerr<<"That is not a valid amount."<<endl;
         cout<<"Press enter to continue.";
         getline(cin, err_str);
         input = "-1";
@@ -233,10 +254,10 @@ bool getValidWithdraw(string& input, Data& userData, AccountType a_type) {
     }
 }
 
-AccountType getAccountType() {
+AccountType getAccountType(TransactionType t_type) {
     string input = "";
-    while(input!="1" && input!="2") {
-        cout<<"--Deposit into: "<<endl;
+    while(input!="1" && input!="2" && input!="3") {
+        cout<<"--"<<(t_type==ADD?"Deposit into: ":"Withdraw from: ")<<endl;
         cout<<"--  1. Checking Account"<<endl;
         cout<<"--  2. Savings Account"<<endl;
         cout<<"--  3. EXIT TRANSACTION"<<endl;
