@@ -3,6 +3,7 @@
 ////////////////////////////////////////
 // FRIEND FUNCTIONS                   //
 ////////////////////////////////////////
+
 ostream& operator << (ostream& stream, UserInfo& uinf) {
     // USER INFO OVERLOADING
     return (
@@ -10,20 +11,22 @@ ostream& operator << (ostream& stream, UserInfo& uinf) {
               <<"| Checking: $"<<fixed<<setprecision(2)<<uinf.CHECKING_BALANCE<<endl
               <<"|  Savings: $"<<fixed<<setprecision(2)<<uinf.SAVINGS_BALANCE<<endl
               <<"|    Total: $"<<fixed<<setprecision(2)<<uinf.TOTAL_BALANCE<<endl
-              <<"|=== "<<endl    
+              <<"|=== "    
     );
 }
 
 ostream& operator << (ostream& stream, Transaction& tinf) {
     // TRANSACTION OVERLOADING
     stream<<"|"
-          <<(tinf.a_type==CHECKING?"CHECKING":"SAVINGS")<<"|"
-          <<(tinf.t_type==ADD?"Deposit":"Withdrawal")<<"\t ";
+          <<(tinf.a_type==CHECKING?" CHECKING":" SAVINGS")<<"|"
+          <<(tinf.t_type==ADD?"    Deposit":" Withdrawal") <<"| ";
     
     if(tinf.t_type==SUBTRACT)
         stream<<"-";
+    else
+        stream<<" ";
     
-    stream<<"$"<<tinf.change<<endl;
+    stream<<"$"<<fixed<<setprecision(2)<<tinf.change;
     return stream;
 }
 
@@ -48,7 +51,7 @@ Data::Data(char* fileName, string USER_NAME) {
         dataFile.read((char*)&uInfo, sizeof(UserInfo)); // read in header information
         
         // storage type: CHECKING, then SAVINGS
-        Transaction t;
+        Transaction t; const long SIZE = sizeof(Transaction);
         while(dataFile.read((char*)&t, sizeof(Transaction))) {
             if(t.t_type == T_BREAK || t.a_type == A_BREAK) {
                 // this is a deleted record.
@@ -56,9 +59,9 @@ Data::Data(char* fileName, string USER_NAME) {
                 avail.push_back(dataFile.tellg());
             }
             else if(t.a_type == CHECKING)
-                checkingRecords[t.id] = dataFile.tellg();
+                checkingRecords[t.id] = ((long)dataFile.tellg())-SIZE;
             else
-                savingsRecords[t.id] = dataFile.tellg();
+                savingsRecords[t.id] = ((long)dataFile.tellg())-SIZE;
         }
         dataFile.clear(); // clear error flags
     }
@@ -91,24 +94,12 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
         a_type,
         change
     };
+
     if(t_type == SUBTRACT) 
         change *= -1;
-    switch(a_type) {
-        case CHECKING:
-            uInfo.CHECKING_BALANCE+=change;
-            uInfo.NUM_CHECKING_TRANS++;
-            break;
-
-        case SAVINGS:
-            uInfo.SAVINGS_BALANCE+=change;
-            uInfo.NUM_SAVINGS_TRANS++;
-            break;
-        // remove compiler warning
-        case A_BREAK:
-            break;
-    }
 
     // write to file. first check avail list, if not seek to end
+    // perform arithmetic before saving data to maintain changes
     if(avail.size()>0) {
         dataFile.seekp(avail[0]);
         avail.erase(avail.begin()); // remove available slot
@@ -116,13 +107,103 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
     else
         dataFile.seekp(0, ios::end);
     
+    switch(a_type) {
+        case CHECKING:
+            uInfo.CHECKING_BALANCE+=change;
+            uInfo.NUM_CHECKING_TRANS++;
+            checkingRecords[newTransaction.id] = dataFile.tellp();
+            break;
+
+        case SAVINGS:
+            uInfo.SAVINGS_BALANCE+=change;
+            uInfo.NUM_SAVINGS_TRANS++;
+            savingsRecords[newTransaction.id] = dataFile.tellp();
+            break;
+        // remove compiler warning
+        case A_BREAK:
+            break;
+    }
     dataFile.write((char*)&newTransaction, sizeof(Transaction));
+        
     dataFile.seekp(0);
     dataFile.write((char*)&uInfo, sizeof(UserInfo));
 }
 
+// create files of their respective transaction lists
+void Data::createTransactionListFiles() {
+    // 2 main files:
+    //   1. dataFileName_CHECKING.txt
+    //   2. dataFileName_SAVINGS.txt
+
+    string outputFileName = dataFileName;
+    fstream checkingOutFile(outputFileName+"_CHECKING.txt", ios::out | ios::trunc);
+    fstream savingsOutFile(outputFileName+"_SAVINGS.txt", ios::out | ios::trunc);
+
+    for(map<long, long>::iterator it = checkingRecords.begin(); it!=checkingRecords.end(); ++it) {
+        Transaction t;
+        dataFile.seekg(it->second); // go to byte offset
+        dataFile.read((char*)&t, sizeof(Transaction));
+
+        // write out to text file
+        checkingOutFile<<t<<endl;
+    }
+
+    for(map<long, long>::iterator it = savingsRecords.begin(); it!=savingsRecords.end(); ++it) {
+        Transaction t;
+        dataFile.seekg(it->second); // go to byte offset
+        dataFile.read((char*)&t, sizeof(Transaction));
+
+        // write out to text file
+        savingsOutFile<<t<<endl;
+    }
+}
+
+void Data::listCheckingTransactions() {
+    for(map<long, long>::iterator it = checkingRecords.begin(); it!=checkingRecords.end(); ++it) {
+        Transaction t;
+        dataFile.seekg(it->second);
+        dataFile.read((char*)&t, sizeof(Transaction));
+        cout<<t.id<<". "<<t<<endl;
+    }
+}
+
+void Data::listSavingsTransactions() {
+    for(map<long, long>::iterator it = savingsRecords.begin(); it!=savingsRecords.end(); ++it) {
+        Transaction t;
+        dataFile.seekg(it->second);
+        dataFile.read((char*)&t, sizeof(Transaction));
+        cout<<t.id<<". "<<t<<endl;
+    }
+}
+
+bool Data::deleteTransaction(long id, AccountType a_type) {
+    // remove ID from map and rewrite location with blank Transaction where
+    // t_type = T_BREAK and a_type = A_BREAK
+
+    map<long, long>::iterator it;
+    switch(a_type) {
+        case CHECKING:
+        {
+            it = checkingRecords.find(id);
+            if(it==checkingRecords.end())
+                return false;
+            
+            break;
+        }
+        case SAVINGS:
+        {
+            it = savingsRecords.find(id);
+            if(it==savingsRecords.end())
+                return false;
+            break;
+        }
+        case A_BREAK:
+            break;
+    }
+}
+
 void Data::WriteUserInfo() {
-    cout<<uInfo;
+    cout<<uInfo<<endl;
 }
 
 float Data::getCheckingBalance() {
