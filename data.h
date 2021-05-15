@@ -7,6 +7,7 @@
 #include<cstdlib>
 #include<iomanip>
 #include<limits>
+#include<sstream>
 
 using namespace std;
 
@@ -51,8 +52,12 @@ class Data {
         void open(char* fileName);
         void close();
 
-        // transaction addition, subtraction, etc.
+        // transactions, listings, deletions
         void createNewTransaction(TransactionType t_type, AccountType a_type, float change);
+        void createTransactionListFiles();
+        void listCheckingTransactions();
+        void listSavingsTransactions();
+        bool deleteTransaction(long id, AccountType a_type);
 
         // printers and getters
         void WriteUserInfo();
