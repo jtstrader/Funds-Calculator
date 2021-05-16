@@ -10,7 +10,10 @@ bool checkArgs(char* dataFile);
 void getName(string& NEW_NAME);
 bool getValidDeposit(string& input);
 bool getValidWithdraw(string& input, Data& userData, AccountType a_type);
-AccountType getAccountType(TransactionType t_type);
+void getTransactionReason(string& input);
+bool getValidDelID(long& id, Data& userData, AccountType a_type);
+AccountType getAccountType_DEPOSIT_WITHDRAWAL(TransactionType t_type);
+AccountType getAccountType_DELETE();
 bool checkDecimal(string input);
 void printHelp();
 
@@ -48,13 +51,14 @@ int main(int argc, char** argv) {
             {
                 // DEPOSIT FUNDS
                 string deposit_amount = "";
-                AccountType a_type = getAccountType(ADD);
+                AccountType a_type = getAccountType_DEPOSIT_WITHDRAWAL(ADD);
 
                 if(a_type!=A_BREAK) {
                     while(!getValidDeposit(deposit_amount));
                     if(deposit_amount == "-1")
                         break;
-                    userData->createNewTransaction(ADD, a_type, stof(deposit_amount));
+                    string reason; getTransactionReason(reason);
+                    userData->createNewTransaction(ADD, a_type, stof(deposit_amount), reason);
                 }
                 break;
             }
@@ -62,13 +66,14 @@ int main(int argc, char** argv) {
             {
                 // DEPOSIT FUNDS
                 string withdraw_amount = "";
-                AccountType a_type = getAccountType(SUBTRACT);
+                AccountType a_type = getAccountType_DEPOSIT_WITHDRAWAL(SUBTRACT);
 
                 if(a_type!=A_BREAK) {
                     while(!getValidWithdraw(withdraw_amount, *userData, a_type));
                     if(withdraw_amount == "-1")
                         break;
-                    userData->createNewTransaction(SUBTRACT, a_type, stof(withdraw_amount));
+                    string reason; getTransactionReason(reason);
+                    userData->createNewTransaction(SUBTRACT, a_type, stof(withdraw_amount), reason);
                 }
                 break;
             }
@@ -79,10 +84,32 @@ int main(int argc, char** argv) {
             }
             case 'd':
             {
+               
                 break;
             }
             case 'e':
             {
+                AccountType a_type = getAccountType_DELETE();
+                if(a_type!=A_BREAK) {
+                    do {
+                        bool exit = true;
+                        long id; while(!getValidDelID(id, *userData, a_type)); // id is pass by reference, continue looping till ID is populated
+                        if(id == -1)
+                            break;
+                        exit = userData->deleteTransaction(id, a_type); // return false is ID input is incorrect
+                        if(exit) { // valid input
+                            cout<<"Transaction Record ID #"<<id<<" successfully deleted."<<endl;
+                            break;
+                        }
+                        else {
+                            // error in deletion, invalid ID inputted
+                            cout<<"Invalid ID Input. Would you like to try again? [Y/N]: ";
+                            string input; getline(cin, input);
+                            if(toupper(input[0])!='Y')
+                                exit = true;
+                        }
+                    } while(!exit);
+                }               
                 break;
             }
             case 'f':
@@ -254,13 +281,98 @@ bool getValidWithdraw(string& input, Data& userData, AccountType a_type) {
     }
 }
 
-AccountType getAccountType(TransactionType t_type) {
+void getTransactionReason(string& input) {
+    // get reason for transaction
+    // or recipient/destination
+    // i.e. general information
+
+    bool ex = false;
+
+    do {
+        cout<<"-- Please insert a note, general information, or destination/recipient of transaction (limit 80 characters) --"<<endl;
+        cout<<"-- ";
+        getline(cin, input);
+        if(input.length()>80)
+            cout<<"Please input a statement under 80 characters."<<endl;
+        else
+            ex = true;
+    } while(!ex);
+}
+
+bool getValidDelID(long& id, Data& userData, AccountType a_type) {
+    
+    string input;
+    switch(a_type) {
+        case CHECKING: userData.listCheckingTransactions(); break;
+        case SAVINGS: userData.listSavingsTransactions(); break;
+        case A_BREAK: break;
+    }
+
+    cout<<"Enter which transaction you'd like to delete. Enter -1 to EXIT: ";
+    getline(cin, input);
+
+    if(input=="-1") {
+        id = -1;
+        return true;
+    }
+
+    // confirm is valid integer
+    try {
+        long testIfValid = stol(input);
+
+        // value is a valid float. cannot be negative. confirm decimals
+        if(testIfValid<0) {
+            cout<<"No transaction record has a negative ID."<<endl;
+            cout<<"Press enter to continue.";
+            getline(cin, err_str);
+            id = -1;
+            return false;
+        }
+        
+        id = testIfValid;
+        return true;
+    }
+    catch(invalid_argument e) {
+        cerr<<"That is not record ID."<<endl;
+        cout<<"Press enter to continue.";
+        getline(cin, err_str);
+        id = -1;
+        return false;
+    }
+}
+
+AccountType getAccountType_DEPOSIT_WITHDRAWAL(TransactionType t_type) {
     string input = "";
     while(input!="1" && input!="2" && input!="3") {
         cout<<"--"<<(t_type==ADD?"Deposit into: ":"Withdraw from: ")<<endl;
         cout<<"--  1. Checking Account"<<endl;
         cout<<"--  2. Savings Account"<<endl;
         cout<<"--  3. EXIT TRANSACTION"<<endl;
+        cout<<"-- Enter an option: ";
+        getline(cin, input);
+
+        switch(input[0]) {
+            case '1': return CHECKING;
+            case '2': return SAVINGS;
+            case '3': break;
+            default:
+                cout<<"Please input a valid response."<<endl;
+                cout<<"Press enter to continue.";
+                getline(cin, err_str);
+                input = "";
+                break;
+        }
+    }
+    return A_BREAK;
+}
+
+AccountType getAccountType_DELETE() {
+    string input = "";
+    while(input!="1" && input!="2" && input!="3") {
+        cout<<"--- SELECT ACCOUNT TYPE ---"<<endl;
+        cout<<"--  1. Checking Accout   --"<<endl;
+        cout<<"--  2. Savings Account   --"<<endl;
+        cout<<"--  3. EXIT DELETION     --"<<endl;
         cout<<"-- Enter an option: ";
         getline(cin, input);
 

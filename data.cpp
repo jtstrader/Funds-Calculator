@@ -26,7 +26,7 @@ ostream& operator << (ostream& stream, Transaction& tinf) {
     else
         stream<<" ";
     
-    stream<<"$"<<fixed<<setprecision(2)<<tinf.change;
+    stream<<"$"<<fixed<<setprecision(2)<<tinf.change<<"| "<<tinf.reason;
     return stream;
 }
 
@@ -77,7 +77,7 @@ void Data::close() {
 
 // create new transaction and provide updates to the uInfo object
 // add transaction to the binary file.
-void Data::createNewTransaction(TransactionType t_type, AccountType a_type, float change) {
+void Data::createNewTransaction(TransactionType t_type, AccountType a_type, float change, string reason) {
     // get last transaction record
     long backId = -1;
     if(a_type == CHECKING && checkingRecords.size()>0) {
@@ -94,6 +94,7 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
         a_type,
         change
     };
+    strcpy(newTransaction.reason, reason.c_str()); // copy in reason into char[80]
 
     if(t_type == SUBTRACT) 
         change *= -1;
@@ -124,7 +125,8 @@ void Data::createNewTransaction(TransactionType t_type, AccountType a_type, floa
             break;
     }
     dataFile.write((char*)&newTransaction, sizeof(Transaction));
-        
+    updateTotal();
+
     dataFile.seekp(0);
     dataFile.write((char*)&uInfo, sizeof(UserInfo));
 }
@@ -188,6 +190,26 @@ bool Data::deleteTransaction(long id, AccountType a_type) {
             if(it==checkingRecords.end())
                 return false;
             
+            // overwrite data in file
+            Transaction DEL = {-1, T_BREAK, A_BREAK, 0};
+            Transaction RESET;
+            dataFile.seekg(it->second);
+            dataFile.read((char*)&RESET, sizeof(Transaction));
+
+            dataFile.seekp(it->second); // navigate to byte offset of record to be deleted
+            dataFile.write((char*)&DEL, sizeof(Transaction));
+            checkingRecords.erase(it); // erase the item from the map
+
+            // reflect changes in the uInfo object
+            if(RESET.t_type==ADD)
+                uInfo.CHECKING_BALANCE-=RESET.change;
+            else
+                uInfo.CHECKING_BALANCE+=RESET.change;
+            uInfo.NUM_CHECKING_TRANS--;
+            
+            updateTotal();
+            dataFile.seekp(0);
+            dataFile.write((char*)&uInfo, sizeof(UserInfo));
             break;
         }
         case SAVINGS:
@@ -195,11 +217,33 @@ bool Data::deleteTransaction(long id, AccountType a_type) {
             it = savingsRecords.find(id);
             if(it==savingsRecords.end())
                 return false;
+
+            // overwrite data in file
+            Transaction DEL = {-1, T_BREAK, A_BREAK, 0};
+            Transaction RESET;
+            dataFile.seekg(it->second); // navigate to byte offset of record to be deleted
+            dataFile.read((char*)&RESET, sizeof(Transaction));
+
+            dataFile.seekp(it->second); // move back size of transaction
+            dataFile.write((char*)&DEL, sizeof(Transaction));
+            savingsRecords.erase(it); // erase the item from the map
+
+            // reflect changes in the uInfo object
+            if(RESET.t_type==ADD)
+                uInfo.SAVINGS_BALANCE-=RESET.change;
+            else
+                uInfo.SAVINGS_BALANCE+=RESET.change;
+            uInfo.NUM_SAVINGS_TRANS--;
+            
+            updateTotal();
+            dataFile.seekp(0);
+            dataFile.write((char*)&uInfo, sizeof(UserInfo));
             break;
         }
         case A_BREAK:
             break;
     }
+    return true;
 }
 
 void Data::WriteUserInfo() {
@@ -220,3 +264,7 @@ float Data::getSavingsBalance() {
 ////////////////////////////////////////
 // PRIVATE FUNCTIONS                  //
 ////////////////////////////////////////
+
+void Data::updateTotal() {
+    uInfo.TOTAL_BALANCE = uInfo.CHECKING_BALANCE+uInfo.SAVINGS_BALANCE;
+}
