@@ -39,6 +39,7 @@ struct Transaction {
     TransactionType t_type;
     AccountType a_type;
     float change; // change in funds (addition/subtraction)
+    String reason; // reasoning for transaction or general information
 
     friend ostream& operator << (ostream& stream, Transaction& tinf);
 };
@@ -53,7 +54,7 @@ class Data {
         void close();
 
         // transactions, listings, deletions
-        void createNewTransaction(TransactionType t_type, AccountType a_type, float change);
+        void createNewTransaction(TransactionType t_type, AccountType a_type, float change, string reason);
         void createTransactionListFiles();
         void listCheckingTransactions();
         void listSavingsTransactions();
@@ -76,5 +77,6 @@ class Data {
         
         // functions
         bool checkDecimal(string input); // check if number of decimals in input is valid
+        void updateTotal(); // update total balance
         
 };
